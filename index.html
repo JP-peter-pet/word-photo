@@ -1,14 +1,24 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Photo Reader</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+    <div class="container">
+        <div class="card">
+            <h1>Word Photo Reader</h1>
+            <p>Upload an image with a single word inside a box.</p>
+            <input type="file" id="imageInput" accept="image/*">
+            <button id="processBtn">Read Word</button>
+            <div id="status">
+                <p>Please select an image.</p>
+            </div>
+        </div>
+    </div>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js'></script>
+    <script src="main.js"></script>
 </body>
 </html>
