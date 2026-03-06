@@ -5,20 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Word Photo Reader</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <div class="card">
             <h1>Word Photo Reader</h1>
-            <p>Upload an image with a single word inside a box.</p>
-            <input type="file" id="imageInput" accept="image/*">
-            <button id="processBtn">Read Word</button>
+            <p>Upload an image or use your camera to snap a word in a box.</p>
+
+            <!-- Image Preview Area -->
+            <div id="imagePreview">
+                <p>Your image will appear here</p>
+            </div>
+            
+            <!-- Video Stream for Camera -->
+            <video id="videoFeed" playsinline style="display:none;"></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+
+            <!-- Action Buttons -->
+            <div id="buttonContainer">
+                <button id="uploadBtn" class="input-btn"><i class="fas fa-upload"></i> Upload Image</button>
+                <button id="cameraBtn" class="input-btn"><i class="fas fa-camera"></i> Use Camera</button>
+                <button id="captureBtn" class="input-btn" style="display:none;"><i class="fas fa-circle-camera"></i> Take Photo</button>
+            </div>
+
+            <input type="file" id="imageInput" accept="image/*" style="display:none;">
+            
+            <button id="processBtn" class="disabled" disabled>Read Word</button>
+            
             <div id="status">
                 <p>Please select an image.</p>
             </div>
         </div>
     </div>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="main.js"></script>
 </body>
 </html>
