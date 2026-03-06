@@ -61,7 +61,6 @@ async function startCamera() {
             videoFeed.style.display = 'block';
             imagePreview.style.display = 'none';
             
-            // Toggle buttons
             uploadBtn.style.display = 'none';
             cameraBtn.style.display = 'none';
             captureBtn.style.display = 'block';
@@ -82,7 +81,6 @@ function stopCamera() {
         stream.getTracks().forEach(track => track.stop());
         stream = null;
     }
-    // Toggle buttons back
     uploadBtn.style.display = 'flex';
     cameraBtn.style.display = 'flex';
     captureBtn.style.display = 'none';
@@ -92,7 +90,10 @@ function capturePhoto() {
     const context = canvas.getContext('2d');
     canvas.width = videoFeed.videoWidth;
     canvas.height = videoFeed.videoHeight;
+    // Flip the image horizontally to match the user's view
+    context.setTransform(-1, 0, 0, 1, canvas.width, 0);
     context.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+    context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
 
     canvas.toBlob((blob) => {
         selectedFile = new File([blob], 'capture.png', { type: 'image/png' });
@@ -107,7 +108,7 @@ async function processImage() {
         return;
     }
 
-    statusP.textContent = 'Starting...';
+    statusP.textContent = 'Initializing OCR engine...';
     disableProcessButton();
 
     try {
@@ -117,14 +118,17 @@ async function processImage() {
                     const progress = (m.progress * 100).toFixed(0);
                     statusP.textContent = `Recognizing text... ${progress}%`;
                 } else {
-                    statusP.textContent = `${m.status.replace(/_/g, ' ')}...`;
+                    const statusText = m.status.charAt(0).toUpperCase() + m.status.slice(1).replace(/_/g, ' ');
+                    statusP.textContent = `${statusText}...`;
                 }
             }
         });
 
+        await worker.loadLanguage('eng');
+        await worker.initialize('eng');
         const { data: { text } } = await worker.recognize(selectedFile);
         await worker.terminate();
-        
+
         const words = text.trim().split(/\s+/);
         const singleWord = words.find(w => /^[a-zA-Z]+$/.test(w));
 
