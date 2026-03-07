@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let selectedFile = null;
     let stream = null;
-    let recognizedWord = null; // To store the word between OCR and TTS
+    let recognizedWord = null;
 
     // --- Event Listeners ---
     uploadBtn.addEventListener('click', () => imageInput.click());
@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Core Functions ---
-
     function handleFile(file) {
         if (!file) return;
         selectedFile = file;
@@ -40,12 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
             imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
             videoFeed.style.display = 'none';
             imagePreview.style.display = 'flex';
-            
-            // Automatically run OCR after displaying the image
             runOcrAndDisplay();
         };
         reader.readAsDataURL(file);
-        disableProcessButton(); // Disable button until OCR is complete
+        disableProcessButton();
     }
 
     async function startCamera() {
@@ -54,11 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
             videoFeed.srcObject = stream;
             videoFeed.style.display = 'block';
             imagePreview.style.display = 'none';
-            
             uploadBtn.style.display = 'none';
             cameraBtn.style.display = 'none';
             captureBtn.style.display = 'block';
-
             statusP.textContent = 'Position the word in the frame.';
             disableProcessButton();
         } catch (error) {
@@ -106,7 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (m.status === 'recognizing text') {
                         statusP.textContent = `Recognizing text... ${(m.progress * 100).toFixed(0)}%`;
                     } else {
-                        statusP.textContent = `${m.status.replace(/_/g, ' ')}...`;
+                        const statusText = m.status.charAt(0).toUpperCase() + m.status.slice(1).replace(/_/g, ' ');
+                        statusP.textContent = `${statusText}...`;
                     }
                 }
             });
@@ -114,11 +110,12 @@ document.addEventListener('DOMContentLoaded', () => {
             await worker.loadLanguage('eng');
             await worker.initialize('eng');
             const { data } = await worker.recognize(selectedFile);
-            
-            // Find a line with exactly one word
+
             const singleWordLine = data.lines.find(line => line.words.length === 1);
             const wordText = singleWordLine ? singleWordLine.words[0].text.trim() : null;
-            const finalWord = wordText && /^[a-zA-Z]{3,}$/.test(wordText) ? wordText : null;
+            
+            // CRITICAL FIX: Relaxed word validation to accept more cases.
+            const finalWord = wordText && /[a-zA-Z]{2,}/.test(wordText) ? wordText.replace(/[^a-zA-Z]/g, '') : null;
 
             if (finalWord) {
                 recognizedWord = finalWord;
@@ -126,15 +123,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusP.textContent = `Word found: "${recognizedWord}". Press Process to listen.`;
                 enableProcessButton();
             } else {
-                imagePreview.innerHTML = `<p>No single word found. Try another image.</p>`;
+                // CRITICAL FIX: Use a styled, visible feedback message.
+                imagePreview.innerHTML = `<p class="ocr-feedback">No clear word found.<br>Please try another image.</p>`;
                 statusP.textContent = 'Could not find a distinct word in the image.';
                 disableProcessButton();
             }
 
         } catch (error) {
             console.error("OCR Error:", error);
-            statusP.textContent = 'An error occurred during OCR.';
-            disableProcessButton();
+            statusP.textContent = 'An error occurred during processing.';
         } finally {
             if (worker) await worker.terminate();
         }
@@ -178,6 +175,5 @@ document.addEventListener('DOMContentLoaded', () => {
         processBtn.classList.add('disabled');
     }
     
-    // Initial State
     disableProcessButton();
 });

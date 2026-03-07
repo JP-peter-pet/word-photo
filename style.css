@@ -9,6 +9,7 @@
     --card-background: #ffffff;
     --text-color: #333;
     --light-text-color: #777;
+    --error-text-color: #d32f2f; /* Error color for feedback */
     --shadow-color: rgba(0, 0, 0, 0.1);
     --glow-color: rgba(106, 17, 203, 0.4);
     --disabled-color: #ccc;
@@ -90,13 +91,20 @@ p {
     object-fit: contain; 
 }
 
-/* 인식된 단어를 위한 스타일 - 이 부분만 추가되었습니다 */
 .found-word {
     font-size: clamp(2.5rem, 10vw, 4.5rem);
     font-weight: 700;
     color: var(--primary-color);
     padding: 20px;
     animation: fadeIn 0.5s ease-in-out;
+}
+
+/* CRITICAL FIX: Style for visible feedback on failure */
+.ocr-feedback {
+    color: var(--error-text-color) !important; /* Use important to override other p styles */
+    font-weight: 600;
+    margin: 0;
+    animation: fadeIn 0.3s;
 }
 
 @keyframes fadeIn {
