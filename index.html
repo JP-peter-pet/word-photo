@@ -11,7 +11,7 @@
     <div class="container">
         <div class="card">
             <h1>Word Photo Reader</h1>
-            <p>Upload an image or use your camera to snap a word in a box.</p>
+            <p>Upload an image or use your camera to snap a word.</p>
 
             <!-- Image Preview Area -->
             <div id="imagePreview">
@@ -23,18 +23,26 @@
             <canvas id="canvas" style="display:none;"></canvas>
 
             <!-- Action Buttons -->
-            <div id="buttonContainer">
-                <button id="uploadBtn" class="input-btn"><i class="fas fa-upload"></i> Upload Image</button>
-                <button id="cameraBtn" class="input-btn"><i class="fas fa-camera"></i> Use Camera</button>
-                <button id="captureBtn" class="input-btn" style="display:none;"><i class="fas fa-circle-camera"></i> Take Photo</button>
+            <div class="actions">
+                <button id="uploadBtn" class="btn-primary">
+                    <i class="fas fa-upload"></i> Upload Image
+                </button>
+                <button id="cameraBtn" class="btn-secondary">
+                    <i class="fas fa-camera"></i> Use Camera
+                </button>
+                <button id="captureBtn" class="btn-capture" style="display:none;">
+                    <i class="fas fa-camera-retro"></i> Take Photo
+                </button>
             </div>
 
-            <input type="file" id="imageInput" accept="image/*" style="display:none;">
-            
-            <button id="processBtn" class="disabled" disabled>Read Word</button>
-            
+            <!-- Process Button -->
+            <button id="processBtn" class="btn-process disabled" disabled>
+                <i class="fas fa-cogs"></i> Process Image
+            </button>
+
+            <!-- Status Area -->
             <div id="status">
-                <p>Please select an image.</p>
+                <p>Select an image to start.</p>
             </div>
         </div>
     </div>
