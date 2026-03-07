@@ -17,22 +17,13 @@ let stream = null; // To hold the camera stream
 
 // --- Event Listeners ---
 
-// Trigger hidden file input
 uploadBtn.addEventListener('click', () => imageInput.click());
-
-// Handle file selection
 imageInput.addEventListener('change', (event) => {
     if (stream) stopCamera();
     handleFile(event.target.files[0]);
 });
-
-// Start camera
 cameraBtn.addEventListener('click', startCamera);
-
-// Capture photo from camera
 captureBtn.addEventListener('click', capturePhoto);
-
-// Process the selected image
 processBtn.addEventListener('click', processImage);
 
 // --- Functions ---
@@ -90,10 +81,9 @@ function capturePhoto() {
     const context = canvas.getContext('2d');
     canvas.width = videoFeed.videoWidth;
     canvas.height = videoFeed.videoHeight;
-    // Flip the image horizontally to match the user's view
     context.setTransform(-1, 0, 0, 1, canvas.width, 0);
     context.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
-    context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+    context.setTransform(1, 0, 0, 1, 0, 0); 
 
     canvas.toBlob((blob) => {
         selectedFile = new File([blob], 'capture.png', { type: 'image/png' });
@@ -110,9 +100,11 @@ async function processImage() {
 
     statusP.textContent = 'Initializing OCR engine...';
     disableProcessButton();
+    let worker;
 
     try {
-        const worker = await Tesseract.createWorker({
+        // Create worker without incorrect options to let it use defaults
+        worker = await Tesseract.createWorker({
             logger: m => {
                 if (m.status === 'recognizing text') {
                     const progress = (m.progress * 100).toFixed(0);
@@ -127,8 +119,7 @@ async function processImage() {
         await worker.loadLanguage('eng');
         await worker.initialize('eng');
         const { data: { text } } = await worker.recognize(selectedFile);
-        await worker.terminate();
-
+        
         const words = text.trim().split(/\s+/);
         const singleWord = words.find(w => /^[a-zA-Z]+$/.test(w));
 
@@ -140,9 +131,12 @@ async function processImage() {
         }
 
     } catch (error) {
-        console.error(error);
+        console.error("OCR Error:", error);
         statusP.textContent = 'An error occurred during image processing.';
     } finally {
+        if (worker) {
+            await worker.terminate();
+        }
         enableProcessButton();
     }
 }
