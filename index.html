@@ -46,7 +46,8 @@
             </div>
         </div>
     </div>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
+    <!-- CRITICAL FIX: Load Tesseract.js BEFORE main.js and REMOVE defer -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="main.js"></script>
 </body>
 </html>
