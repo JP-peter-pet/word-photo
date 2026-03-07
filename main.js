@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (e) => {
             imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+            imagePreview.classList.remove('found-word'); // Reset class on new image
             videoFeed.style.display = 'none';
             imagePreview.style.display = 'flex';
         };
@@ -135,9 +136,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const singleWord = words.find(w => /^[a-zA-Z]{3,}$/.test(w)); // Find a word with 3+ letters
 
             if (singleWord) {
+                // 핵심 수정: 인식된 단어를 미리보기 영역에 표시하고 음성 재생
+                imagePreview.innerHTML = `<span>${singleWord}</span>`;
+                imagePreview.classList.add('found-word');
                 statusP.textContent = `Found word: "${singleWord}". Reading it out loud.`;
-                speakWord(singleWord, 5, 2000);
+                speakWord(singleWord, 5, 2000); // Read 5 times
             } else {
+                // 단어를 찾지 못하면 이전처럼 메시지 표시
+                imagePreview.innerHTML = `<p>No distinct word found. Please try another image.</p>`;
+                imagePreview.classList.remove('found-word');
                 statusP.textContent = 'Could not find a distinct word in the image.';
             }
 
@@ -148,7 +155,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (worker) {
                 await worker.terminate();
             }
-            // Don't re-enable the button immediately to avoid spam
+            // 처리가 끝나면 버튼을 다시 활성화할 수 있으나, 연속적인 요청을 막기 위해 여기서는 비활성화 상태 유지
+            // enableProcessButton();
         }
     }
 
