@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoFeed = document.getElementById('videoFeed');
     const canvas = document.getElementById('canvas');
 
-    // Hidden file input, triggered by the upload button
     const imageInput = document.createElement('input');
     imageInput.type = 'file';
     imageInput.accept = 'image/*';
@@ -17,21 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(imageInput);
 
     let selectedFile = null;
-    let stream = null; // To hold the camera stream
+    let stream = null;
+    let recognizedWord = null; // To store the word between OCR and TTS
 
     // --- Event Listeners ---
-    if (uploadBtn) {
-        uploadBtn.addEventListener('click', () => imageInput.click());
-    }
-    if (cameraBtn) {
-        cameraBtn.addEventListener('click', startCamera);
-    }
-    if (captureBtn) {
-        captureBtn.addEventListener('click', capturePhoto);
-    }
-    if (processBtn) {
-        processBtn.addEventListener('click', processImage);
-    }
+    uploadBtn.addEventListener('click', () => imageInput.click());
+    cameraBtn.addEventListener('click', startCamera);
+    captureBtn.addEventListener('click', capturePhoto);
+    processBtn.addEventListener('click', speakRecognizedWord);
     imageInput.addEventListener('change', (event) => {
         if (stream) stopCamera();
         handleFile(event.target.files[0]);
@@ -46,36 +38,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (e) => {
             imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-            imagePreview.classList.remove('found-word'); // Reset class on new image
             videoFeed.style.display = 'none';
             imagePreview.style.display = 'flex';
+            
+            // Automatically run OCR after displaying the image
+            runOcrAndDisplay();
         };
-        reader.readAsDataURL(selectedFile);
-
-        statusP.textContent = `Ready to process: ${file.name}`;
-        enableProcessButton();
+        reader.readAsDataURL(file);
+        disableProcessButton(); // Disable button until OCR is complete
     }
 
     async function startCamera() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                videoFeed.srcObject = stream;
-                videoFeed.style.display = 'block';
-                imagePreview.style.display = 'none';
-                
-                uploadBtn.style.display = 'none';
-                cameraBtn.style.display = 'none';
-                captureBtn.style.display = 'block';
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            videoFeed.srcObject = stream;
+            videoFeed.style.display = 'block';
+            imagePreview.style.display = 'none';
+            
+            uploadBtn.style.display = 'none';
+            cameraBtn.style.display = 'none';
+            captureBtn.style.display = 'block';
 
-                statusP.textContent = 'Position the word in the frame.';
-                disableProcessButton();
-            } catch (error) {
-                console.error('Camera Error:', error);
-                statusP.textContent = 'Could not access the camera.';
-            }
-        } else {
-            statusP.textContent = 'Camera not supported by your browser.';
+            statusP.textContent = 'Position the word in the frame.';
+            disableProcessButton();
+        } catch (error) {
+            console.error('Camera Error:', error);
+            statusP.textContent = 'Could not access the camera.';
         }
     }
 
@@ -94,9 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const context = canvas.getContext('2d');
         canvas.width = videoFeed.videoWidth;
         canvas.height = videoFeed.videoHeight;
-        context.setTransform(-1, 0, 0, 1, canvas.width, 0); // Mirror horizontally
+        context.setTransform(-1, 0, 0, 1, canvas.width, 0);
         context.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
-        context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+        context.setTransform(1, 0, 0, 1, 0, 0);
 
         canvas.toBlob((blob) => {
             const file = new File([blob], 'capture.png', { type: 'image/png' });
@@ -105,58 +93,59 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function processImage() {
-        if (!selectedFile) {
-            statusP.textContent = 'Error: No image selected!';
-            return;
-        }
+    async function runOcrAndDisplay() {
+        if (!selectedFile) return;
 
         statusP.textContent = 'Initializing OCR engine...';
-        disableProcessButton();
+        recognizedWord = null;
         let worker;
 
         try {
             worker = await Tesseract.createWorker({
                 logger: m => {
                     if (m.status === 'recognizing text') {
-                        const progress = (m.progress * 100).toFixed(0);
-                        statusP.textContent = `Recognizing text... ${progress}%`;
+                        statusP.textContent = `Recognizing text... ${(m.progress * 100).toFixed(0)}%`;
                     } else {
-                        const statusText = m.status.charAt(0).toUpperCase() + m.status.slice(1).replace(/_/g, ' ');
-                        statusP.textContent = `${statusText}...`;
+                        statusP.textContent = `${m.status.replace(/_/g, ' ')}...`;
                     }
                 }
             });
 
             await worker.loadLanguage('eng');
             await worker.initialize('eng');
-            const { data: { text } } = await worker.recognize(selectedFile);
+            const { data } = await worker.recognize(selectedFile);
             
-            const words = text.trim().split(/\s+/);
-            const singleWord = words.find(w => /^[a-zA-Z]{3,}$/.test(w)); // Find a word with 3+ letters
+            // Find a line with exactly one word
+            const singleWordLine = data.lines.find(line => line.words.length === 1);
+            const wordText = singleWordLine ? singleWordLine.words[0].text.trim() : null;
+            const finalWord = wordText && /^[a-zA-Z]{3,}$/.test(wordText) ? wordText : null;
 
-            if (singleWord) {
-                // 핵심 수정: 인식된 단어를 미리보기 영역에 표시하고 음성 재생
-                imagePreview.innerHTML = `<span>${singleWord}</span>`;
-                imagePreview.classList.add('found-word');
-                statusP.textContent = `Found word: "${singleWord}". Reading it out loud.`;
-                speakWord(singleWord, 5, 2000); // Read 5 times
+            if (finalWord) {
+                recognizedWord = finalWord;
+                imagePreview.innerHTML = `<span class="found-word">${recognizedWord}</span>`;
+                statusP.textContent = `Word found: "${recognizedWord}". Press Process to listen.`;
+                enableProcessButton();
             } else {
-                // 단어를 찾지 못하면 이전처럼 메시지 표시
-                imagePreview.innerHTML = `<p>No distinct word found. Please try another image.</p>`;
-                imagePreview.classList.remove('found-word');
+                imagePreview.innerHTML = `<p>No single word found. Try another image.</p>`;
                 statusP.textContent = 'Could not find a distinct word in the image.';
+                disableProcessButton();
             }
 
         } catch (error) {
             console.error("OCR Error:", error);
-            statusP.textContent = 'An error occurred during processing.';
+            statusP.textContent = 'An error occurred during OCR.';
+            disableProcessButton();
         } finally {
-            if (worker) {
-                await worker.terminate();
-            }
-            // 처리가 끝나면 버튼을 다시 활성화할 수 있으나, 연속적인 요청을 막기 위해 여기서는 비활성화 상태 유지
-            // enableProcessButton();
+            if (worker) await worker.terminate();
+        }
+    }
+
+    function speakRecognizedWord() {
+        if (recognizedWord) {
+            statusP.textContent = `Reading "${recognizedWord}" aloud...`;
+            speakWord(recognizedWord, 5, 2000);
+        } else {
+            statusP.textContent = 'No word to speak. Upload an image first.';
         }
     }
 
@@ -166,19 +155,16 @@ document.addEventListener('DOMContentLoaded', () => {
             utterance.lang = 'en-US';
             utterance.rate = 0.9;
             let count = 0;
-
             const speak = () => {
                 if (count < times) {
                     window.speechSynthesis.speak(utterance);
                     count++;
-                    if (count < times) {
-                       setTimeout(speak, interval);
-                    }
+                    if (count < times) setTimeout(speak, interval);
                 }
             };
             speak();
         } else {
-            statusP.textContent = 'Text-to-speech is not supported by your browser.';
+            statusP.textContent = 'TTS not supported by your browser.';
         }
     }
 
@@ -191,4 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         processBtn.disabled = true;
         processBtn.classList.add('disabled');
     }
+    
+    // Initial State
+    disableProcessButton();
 });
